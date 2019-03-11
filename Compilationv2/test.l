@@ -1,0 +1,6 @@
+entier $a;
+
+main()
+{
+
+}
