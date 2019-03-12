@@ -43,12 +43,17 @@ int adresseGlobaleCourante = 0;
 
 void parcours_n_prog(n_prog *n)
 {
-  //char *fct = "prog";
-
   portee = P_VARIABLE_GLOBALE;
   parcours_l_dec(n->variables);
-
   parcours_l_dec(n->fonctions); 
+
+  int indice_fct;
+  if((indice_fct = rechercheExecutable("main")) == -1) {
+	  erreur("Main inexistant");
+  }
+  if(tabsymboles.tab[indice_fct].complement !=  0) {
+		erreur("Le main doit avoir aucun args");
+	}
 }
 
 /*-------------------------------------------------------------------------*/
@@ -56,7 +61,6 @@ void parcours_n_prog(n_prog *n)
 
 void parcours_l_instr(n_l_instr *n)
 {
-  //char *fct = "l_instr";
   if(n){
   parcours_instr(n->tete);
   parcours_l_instr(n->queue);
@@ -82,22 +86,17 @@ void parcours_instr(n_instr *n)
 
 void parcours_instr_si(n_instr *n)
 {  
-  //char *fct = "instr_si";
-
   parcours_exp(n->u.si_.test);
   parcours_instr(n->u.si_.alors);
   if(n->u.si_.sinon){
     parcours_instr(n->u.si_.sinon);
   }
- 
 }
 
 /*-------------------------------------------------------------------------*/
 
 void parcours_instr_tantque(n_instr *n)
 {
-  //char *fct = "instr_tantque";
-
   parcours_exp(n->u.tantque_.test);
   parcours_instr(n->u.tantque_.faire);
 }
@@ -106,22 +105,6 @@ void parcours_instr_tantque(n_instr *n)
 
 void parcours_instr_affect(n_instr *n)    /********************/
 {
-  //char *fct = "instr_affect";
-
-  int indice_identif;
-  if((indice_identif = rechercheExecutable(n->u.affecte_.var->nom)) == -1) {
-    erreur("La variable doit être déclarée avant de lui affecter une valeur");
-  }
-
-  if(n->u.affecte_.var->type == simple){
-    if(tabsymboles.tab[indice_identif].type == T_TABLEAU_ENTIER)
-      erreur("Une variable simple ne doit pas avoir d'indice");
-  }
-  else {
-    if(tabsymboles.tab[indice_identif].type == T_ENTIER)
-      erreur("Un variable de type tableau doit avoir un indice");
-  }
-
   parcours_var(n->u.affecte_.var);
   parcours_exp(n->u.affecte_.exp);
 }
@@ -130,17 +113,12 @@ void parcours_instr_affect(n_instr *n)    /********************/
 
 void parcours_instr_appel(n_instr *n)
 {
-  //char *fct = "instr_appel";
-
-
   parcours_appel(n->u.appel);
 }
 /*-------------------------------------------------------------------------*/
 
 void parcours_appel(n_appel *n)   /*********************/
 {
-  //char *fct = "appel";
-
   int indice_fct;
   if((indice_fct = rechercheExecutable(n->fonction)) == -1) {
     erreur("Une fonction doit être déclarée avant de l'appeler");
@@ -151,58 +129,37 @@ void parcours_appel(n_appel *n)   /*********************/
     erreur("Mauvais nombre d'arguments pour la fonction");
   }
   
-  if((indice_fct = rechercheExecutable("main")) == -1) {
-	  erreur("Main inexistant");
-
-    if(tabsymboles.tab[indice_fct].complement !=  0) {
-		erreur("Le main doit avoir aucun args");
-	  }
-  }
-  
-  //parcours_xml_texte( n->fonction, trace_abs);
   parcours_l_exp(n->args);
-  
 }
 
 /*-------------------------------------------------------------------------*/
 
 void parcours_instr_retour(n_instr *n)
 {
-  //char *fct = "instr_retour";
-  
   parcours_exp(n->u.retour_.expression);
-
 }
 
 /*-------------------------------------------------------------------------*/
 
 void parcours_instr_ecrire(n_instr *n)
 {
-  //char *fct = "instr_ecrire";
-  
   parcours_exp(n->u.ecrire_.expression);
- 
 }
 
 /*-------------------------------------------------------------------------*/
 
 void parcours_l_exp(n_l_exp *n)
 {
-  //char *fct = "l_exp";
- 
-
   if(n){
     parcours_exp(n->tete);
     parcours_l_exp(n->queue);
   }
- 
 }
 
 /*-------------------------------------------------------------------------*/
 
 void parcours_exp(n_exp *n)
 {
-
   if(n->type == varExp) parcours_varExp(n);
   else if(n->type == opExp) parcours_opExp(n);
   else if(n->type == intExp) parcours_intExp(n);
@@ -214,8 +171,6 @@ void parcours_exp(n_exp *n)
 
 void parcours_varExp(n_exp *n)  /****************/
 {
-  //char *fct = "varExp";
-
   int indice_var;
   if((indice_var = rechercheExecutable(n->u.var->nom)) == -1) {
     erreur("Une variable doit être déclarée avant utilisation");
@@ -236,24 +191,12 @@ void parcours_varExp(n_exp *n)  /****************/
 /*-------------------------------------------------------------------------*/
 void parcours_opExp(n_exp *n)
 {
-  //char *fct = "opExp";
- 
-  /*if(n->u.opExp_.op == plus) parcours_xml_texte("plus", trace_abs);
-  else if(n->u.opExp_.op == moins) parcours_xml_texte("moins", trace_abs);
-  else if(n->u.opExp_.op == fois) parcours_xml_texte("fois", trace_abs);
-  else if(n->u.opExp_.op == divise) parcours_xml_texte("divise", trace_abs);
-  else if(n->u.opExp_.op == egal) parcours_xml_texte("egal", trace_abs);
-  else if(n->u.opExp_.op == inferieur) parcours_xml_texte("inf", trace_abs);
-  else if(n->u.opExp_.op == ou) parcours_xml_texte("ou", trace_abs);
-  else if(n->u.opExp_.op == et) parcours_xml_texte("et", trace_abs);
-  else if(n->u.opExp_.op == non) parcours_xml_texte("non", trace_abs);  */
   if( n->u.opExp_.op1 != NULL ) {
     parcours_exp(n->u.opExp_.op1);
   }
   if( n->u.opExp_.op2 != NULL ) {
     parcours_exp(n->u.opExp_.op2);
   }
- 
 }
 
 /*-------------------------------------------------------------------------*/
@@ -262,21 +205,17 @@ void parcours_intExp(n_exp *n)
 {
   char texte[ 50 ]; // Max. 50 chiffres
   sprintf(texte, "%d", n->u.entier);
-  //parcours_element( "intExp", texte, trace_abs );
 }
 
 /*-------------------------------------------------------------------------*/
 void parcours_lireExp(n_exp *n)
 {
-  //char *fct = "lireExp";
-
 }
 
 /*-------------------------------------------------------------------------*/
 
 void parcours_appelExp(n_exp *n)
 {
-  //char *fct = "appelExp";
   parcours_appel(n->u.appel);
 }
 
@@ -284,8 +223,6 @@ void parcours_appelExp(n_exp *n)
 
 void parcours_l_dec(n_l_dec *n)
 {
-  //char *fct = "l_dec";
-
   if( n ){
     
     parcours_dec(n->tete);
@@ -297,7 +234,6 @@ void parcours_l_dec(n_l_dec *n)
 
 void parcours_dec(n_dec *n)
 {
-
   if(n){
     if(n->type == foncDec) {
       parcours_foncDec(n);
@@ -315,12 +251,14 @@ void parcours_dec(n_dec *n)
 
 void parcours_foncDec(n_dec *n)  /*********************/
 {
-  //char *fct = "foncDec";
   int complement = longueur_liste(n->u.foncDec_.param);
 
-  entreeFonction();
+  if(rechercheExecutable(n->nom) != -1) {
+    erreur("Il y a déja une fonction qui porte ce nom");
+  }
+
   ajouteIdentificateur(n->nom, P_VARIABLE_GLOBALE, T_FONCTION, 0, complement);
-  //  parcours_xml_texte( n->nom, trace_abs );
+  entreeFonction();
   parcours_l_dec(n->u.foncDec_.param);
   portee = P_VARIABLE_LOCALE;
   parcours_l_dec(n->u.foncDec_.variables);
@@ -333,14 +271,12 @@ void parcours_foncDec(n_dec *n)  /*********************/
 
 void parcours_varDec(n_dec *n)   /**********************/
 {
-  int address;
-
   if(rechercheDeclarative(n->nom) == -1) {
     int complement = 1;
+    int address;
 
     switch(portee) {
       case P_VARIABLE_GLOBALE : address = adresseGlobaleCourante;
-                                printf("adressGlobaleCourante = %d\n", address);
                                 ajouteIdentificateur(n->nom, portee, T_ENTIER, address, complement);
                                 adresseGlobaleCourante += 4;
                                 break;
@@ -357,7 +293,6 @@ void parcours_varDec(n_dec *n)   /**********************/
   else {
 	  erreur("Variable simple déjà déclarée");
   }
-  //parcours_element("varDec", n->nom, trace_abs);
 }
 
 /*-------------------------------------------------------------------------*/
@@ -389,7 +324,6 @@ void parcours_tabDec(n_dec *n)     /*******************/
 	erreur("Varaible tableau déjà déclarée");
   
   sprintf(texte, "%s[%d]", n->nom, n->u.tabDec_.taille);
-  //parcours_element( "tabDec", texte, trace_abs );
 }
 
 /*-------------------------------------------------------------------------*/
@@ -415,14 +349,11 @@ void parcours_var_simple(n_var *n)  /*********************/
   if(tabsymboles.tab[indice_var].type == T_TABLEAU_ENTIER) {
 	erreur("Une variable simple ne doit pas être utilisé avec un indice");
   }
-  //parcours_element("var_simple", n->nom, trace_abs);
 }
 
 /*-------------------------------------------------------------------------*/
 void parcours_var_indicee(n_var *n)   /********************/
 {
-  //char *fct = "var_indicee";
-  
   int indice_var;
   if((indice_var = rechercheExecutable(n->nom)) == -1) {
 	  erreur("Une variable tableau doit être déclarée avant utilisation");
@@ -431,10 +362,8 @@ void parcours_var_indicee(n_var *n)   /********************/
 	if(tabsymboles.tab[indice_var].type == T_ENTIER) {
 		erreur("Une variable tableau doit être utilisée avec un indice");
 	}
-
-  //parcours_element("var_base_tableau", n->nom, trace_abs);
+  
   parcours_exp( n->u.indicee_.indice );
-
 }
 
 /*-------------------------------------------------------------------------*/

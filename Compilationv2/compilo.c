@@ -128,9 +128,8 @@ int main(int argc, char **argv) {
       fprintf(stderr, "impossible d'ouvrir le fichier %s\n", argv[i]);
       exit(1);
     }
+    yyparse();
 	  parcours_n_prog(n);
-	  afficheTabsymboles();
-    //Affiche table de symboles
   }
   if(affiche_nasm){
     //Affiche code cible NASM
