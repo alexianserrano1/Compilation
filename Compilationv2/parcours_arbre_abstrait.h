@@ -3,6 +3,7 @@
 
 #include "syntabs.h"
 #include "tabsymboles.h"
+#include "code3a.h"
 
 void parcours_n_prog(n_prog *n);
 
