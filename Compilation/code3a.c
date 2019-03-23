@@ -180,6 +180,7 @@ void _code3a_affiche_operande(operande *oper, int affiche_last_use){
     }    
   }
   else{
+    printf("%d\n", oper->oper_type);
     erreur("Type d'opérande invalide dans code 3 adresses");
   }    
 }
