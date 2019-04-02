@@ -53,7 +53,8 @@ void update_lastuse(operande *op_oper1, int is_lvalue) {
     }
     // les indices de tableaux sont des rvalue (utilisation du temporaire)
     else if(op_oper1->oper_type == O_VARIABLE){
-      if(op_oper1->u.oper_var.oper_indice && op_oper1->u.oper_var.oper_indice->oper_type == O_TEMPORAIRE) {
+      if(op_oper1->u.oper_var.oper_indice &&
+        op_oper1->u.oper_var.oper_indice->oper_type == O_TEMPORAIRE) {
         int tempnum = op_oper1->u.oper_var.oper_indice->u.oper_temp.oper_tempnum;
         desctemp[tempnum]->u.oper_temp.last_use = code3a.next;
       }
@@ -96,8 +97,8 @@ operande *code3a_new_temporaire(){
   newtemp->oper_type = O_TEMPORAIRE;
   newtemp->u.oper_temp.oper_tempnum = global_temp_counter;
   newtemp->u.oper_temp.last_use = -1;
-  newtemp->u.oper_temp.emplacement = 0;  
-  if(global_temp_counter >= desctempsize ) { // temp_desc too short, must realloc
+  newtemp->u.oper_temp.emplacement = 0;
+  if(global_temp_counter >= desctempsize ) { //temp_desc too short, must realloc
     desctempsize += MAX_TEMP;
     desctemp = realloc(desctemp, desctempsize * sizeof(operande *));
   }
@@ -136,15 +137,22 @@ operande *code3a_new_etiquette_auto(){
 
 /******************************************************************************/
 
-operande *code3a_new_var(char *nom, int portee, int adresse){
+operande *code3a_new_var_indicee(char *nom, int portee, int adresse,
+                                 operande *indice){
   operande *newvar = malloc(sizeof(operande));
   newvar->oper_type = O_VARIABLE;
   newvar->u.oper_var.oper_nom = malloc(sizeof(char)*102);
   sprintf(newvar->u.oper_var.oper_nom, "v%s",nom); // préfixer le nom d'un "v"
   newvar->u.oper_var.oper_portee = portee;
   newvar->u.oper_var.oper_adresse = adresse;
-  newvar->u.oper_var.oper_indice = NULL;
+  newvar->u.oper_var.oper_indice = indice;
   return newvar;
+}
+
+/******************************************************************************/
+
+operande *code3a_new_var(char *nom, int portee, int adresse){
+  return code3a_new_var_indicee(nom, portee, adresse, NULL);
 }
 
 /******************************************************************************/
@@ -202,14 +210,19 @@ int _is_controle(instrcode opcode){
 
 /******************************************************************************/
 
-void code3a_affiche_ligne_code(operation_3a *i_oper){
-  if(i_oper->op_etiq != NULL){
-      printf(" >%8s", i_oper->op_etiq);
+void code3a_affiche_ligne_code_i(operation_3a *i_oper,int indent){
+  if(indent){
+    if(i_oper->op_etiq){
+        printf(" >%8s", i_oper->op_etiq);
+    }
+    else{
+      printf("%10s", "");
+    }
+    printf(" : ");
   }
-  else{
-    printf("%10s", "");
+  else if(i_oper->op_etiq){
+    printf("%s: ",i_oper->op_etiq);
   }
-  printf(" : ");
   if(_is_controle(i_oper->op_code)){
     printf("if ");
     _code3a_affiche_operande(i_oper->op_oper1, 0);
@@ -265,11 +278,17 @@ void code3a_affiche_ligne_code(operation_3a *i_oper){
 
 /******************************************************************************/
 
+void code3a_affiche_ligne_code(operation_3a *i_oper){
+  code3a_affiche_ligne_code_i(i_oper, 0);
+}
+
+/******************************************************************************/
+
 void code3a_affiche_code(){
   int i_ligne;
   for(i_ligne=0;i_ligne<code3a.next;i_ligne++){
     printf("%04d",i_ligne);
-    code3a_affiche_ligne_code(&code3a.liste[i_ligne]);
+    code3a_affiche_ligne_code_i(&code3a.liste[i_ligne],1);
     printf("\n");
   }
 }

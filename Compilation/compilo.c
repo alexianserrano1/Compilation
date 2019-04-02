@@ -8,6 +8,7 @@
 #include "syntabs.h"
 #include "tabsymboles.h"
 #include "parcours_arbre_abstrait.h"
+#include "c3a2nasm.h"
 
 FILE *yyin;
 extern char *yytext;   // déclaré dans analyseur_lexical
@@ -126,8 +127,6 @@ int main(int argc, char **argv) {
         exit(1);
       }
     yyparse();
-    if(!affiche_tabsymb)
-      fprintf(stderr, "le code 3a necessite -t\n");
     parcours_n_prog(n);
     code3a_affiche_code();
   }
@@ -141,7 +140,12 @@ int main(int argc, char **argv) {
 	  parcours_n_prog(n);
   }
   if(affiche_nasm){
-    //Affiche code cible NASM
+    yyin = fopen(fichier_source, "r");
+    if(yyin == NULL){
+      fprintf(stderr, "impossible d'ouvrir le fichier %s\n", argv[i]);
+      exit(1);
+    }
+    c3a2nasm_generer();
   }
   return 0;
 }

@@ -40,9 +40,6 @@ extern int adresseLocaleCourante;
 extern int adresseArgumentCourant;
 int adresseGlobaleCourante = 0;
 extern code3a_ code3a;
-int cpt = 0;
-
-int retour = 0;
 
 /*-------------------------------------------------------------------------*/
 
@@ -50,15 +47,9 @@ void parcours_n_prog(n_prog *n)     /*******************/
 {
   code3a_init();
 
-  printf("Debut\n");
-
   portee = P_VARIABLE_GLOBALE;
-  printf("Parcours var\n");
   parcours_l_dec(n->variables);
-  printf("Parcours func\n");
   parcours_l_dec(n->fonctions); 
-
-  printf("Fin\n");
 
   int indice_fct;
   if((indice_fct = rechercheExecutable("main")) == -1) {
@@ -76,8 +67,6 @@ void parcours_l_instr(n_l_instr *n)
 {
   if(n){
     parcours_instr(n->tete);
-    if(n->tete->type == retourInst)
-      retour++;
     parcours_l_instr(n->queue);
   }
 }
@@ -112,11 +101,15 @@ void parcours_instr_si(n_instr *n)
   
   parcours_instr(n->u.si_.alors);
   
-  etiq = code3a_new_etiquette_auto();
+  //etiq = code3a_new_etiquette_auto();       //// j'ai delete ca
 
   fin = code3a_new_etiquette(etiq->u.oper_nom); 
 
   if(n->u.si_.sinon){
+
+    etiq = code3a_new_etiquette_auto();           //// j'ai add ca
+    fin = code3a_new_etiquette(etiq->u.oper_nom); //// et ca
+
     code3a_ajoute_instruction(jump, fin, NULL, NULL, "got");
 
     code3a_ajoute_etiquette(sinon->u.oper_nom);
@@ -171,7 +164,7 @@ void parcours_instr_affect(n_instr *n)    /********************/
     exp->u.oper_var.oper_indice = tmp2;
   }
 
-  code3a_ajoute_instruction(assign, exp, NULL, var, "Affectation");
+  code3a_ajoute_instruction(assign, exp, NULL, var, "Affect");
 }
 
 /*-------------------------------------------------------------------------*/
@@ -179,7 +172,11 @@ void parcours_instr_affect(n_instr *n)    /********************/
 void parcours_instr_appel(n_instr *n)
 {
   parcours_appel(n->u.appel);
-  code3a_ajoute_instruction(func_call, code3a_new_etiquette(n->u.appel->fonction), NULL, NULL, NULL);
+  char nom[20];
+  strcpy(nom, "f");
+  strcat(nom, n->u.appel->fonction);
+  
+  code3a_ajoute_instruction(func_call, code3a_new_etiquette(nom), NULL, NULL, "appel func");
 }
 /*-------------------------------------------------------------------------*/
 
@@ -195,18 +192,17 @@ operande* parcours_appel(n_appel *n)   /*********************/
   code3a_ajoute_instruction(alloc, constante, NULL, NULL," alloue place pour la valeur de retour");
 
 
-  int nb_args = longueur_args(n->args);                 ///////////////////// +param
+  int nb_args = longueur_args(n->args);               ///////////////////// +param
   if(nb_args != tabsymboles.tab[indice_fct].complement) {
     erreur("Mauvais nombre d'arguments pour la fonction");
   }
-  
+  int portee_bis = portee;
+  portee = P_ARGUMENT;
   parcours_l_exp(n->args);
+  portee = portee_bis;
 
-  char* nom = n->fonction;
-  /*strcat(nom, n->fonction);*/
-  operande* etiquette;
-  etiquette = code3a_new_etiquette(nom);
-  printf("9oper_type = %d\n", etiquette->oper_type);
+  //char* nom = n->fonction;
+  //operande* etiquette = code3a_new_etiquette(nom);
   operande* temporaire = code3a_new_temporaire();
 
   return temporaire;
@@ -348,8 +344,10 @@ operande* parcours_opExp(n_exp *n)
   if(op < egal) {
     operande* temporaire;
     temporaire = code3a_new_temporaire();
-    printf("10oper_type = %d\n", temporaire->oper_type);
     code3a_ajoute_instruction(code, op1, op2, temporaire, "Arithmétique / Logique");
+
+    if(portee == P_ARGUMENT)
+      code3a_ajoute_instruction(func_param, temporaire, NULL, NULL, "Paramètre opExp");
     
     return temporaire;
   }
@@ -359,19 +357,14 @@ operande* parcours_opExp(n_exp *n)
   operande* etiq = code3a_new_etiquette_auto();
 
   etiquette = code3a_new_etiquette(etiq->u.oper_nom);
-  printf("11oper_type = %d\n", etiquette->oper_type);
   code3a_ajoute_instruction(code, op1, op2, etiquette, "Saut test");
 
   operande *temporaire, *const_vrai, *const_faux, *test;
   temporaire = code3a_new_temporaire();
-  printf("12oper_type = %d\n", temporaire->oper_type);
   const_vrai = code3a_new_constante(1);
-  printf("13oper_type = %d\n", const_vrai->oper_type);
   const_faux = code3a_new_constante(0);
-  printf("14oper_type = %d\n", const_faux->oper_type);
   etiq = code3a_new_etiquette_auto();
   test = code3a_new_etiquette(etiq->u.oper_nom);
-  printf("15oper_type = %d\n", test->oper_type);
   code3a_ajoute_instruction(assign, const_faux, NULL, temporaire, "Cas du test faux");
   code3a_ajoute_instruction(jump, test, NULL, NULL, "jump jump jump");
   code3a_ajoute_etiquette(etiquette->u.oper_nom);
@@ -390,7 +383,6 @@ operande* parcours_intExp(n_exp *n)
 
   operande* constante;
   constante = code3a_new_constante(n->u.entier);
-  printf("16oper_type = %d\n", constante->oper_type);
 
   return constante;
 }
@@ -400,7 +392,6 @@ operande* parcours_lireExp(n_exp *n)
 {
   operande* temporaire;
   temporaire = code3a_new_temporaire();
-  printf("17oper_type = %d\n", temporaire->oper_type);
   code3a_ajoute_instruction(sys_read, NULL, NULL, temporaire, "Recuperation de la valeur de \"lire\"");
 
   return temporaire;
@@ -421,12 +412,8 @@ operande* parcours_appelExp(n_exp *n)
 void parcours_l_dec(n_l_dec *n)
 {
   if(n){
-    printf("parcours dec\n ");
     parcours_dec(n->tete);
-    printf("parcours l_dec\n ");
     parcours_l_dec(n->queue);
-    printf("sortie parcours l_dec\n");
-
   }
 }
 
@@ -442,9 +429,7 @@ void parcours_dec(n_dec *n)      /*****************/
       parcours_varDec(n);
     }
     else if(n->type == tabDec) { 
-      printf("avant parcours tabDec\n");
       parcours_tabDec(n);
-      printf("apres parcours tabDec\n");
     }
   }
 }
@@ -458,28 +443,21 @@ void parcours_foncDec(n_dec *n)  /*********************/
   if(rechercheExecutable(n->nom) != -1) {
     erreur("Il y a déja une fonction qui porte ce nom");
   }
-  printf("parcours fonc_dec\n");
-
 
   char nom[20];
   strcpy(nom, "f");
   strcat(nom, n->nom);
 
-  printf("code3a ajout func\n");
   operande* fonction = code3a_new_etiquette(nom);
-  printf("18oper_type = %d\n", fonction->oper_type);
   code3a_ajoute_etiquette(fonction->u.oper_nom);
   code3a_ajoute_instruction(func_begin, NULL, NULL, NULL, "Début de la fonction");
 
-  printf("suite\n");
   ajouteIdentificateur(n->nom, P_VARIABLE_GLOBALE, T_FONCTION, 0, complement);
   entreeFonction();
   parcours_l_dec(n->u.foncDec_.param);
   portee = P_VARIABLE_LOCALE;
   parcours_l_dec(n->u.foncDec_.variables);
-  printf("Avant parcours instr\n");
   parcours_instr(n->u.foncDec_.corps);
-  printf("Apres parcours instr\n");
 
   code3a_ajoute_instruction(func_end, NULL, NULL, NULL, "Fin de la fonction");
   sortieFonction(1);
@@ -500,24 +478,19 @@ void parcours_varDec(n_dec *n)   /**********************/
       case P_VARIABLE_GLOBALE : address = adresseGlobaleCourante;
                                 ajouteIdentificateur(n->nom, portee, T_ENTIER, address, complement);
                                 var = code3a_new_var(nom, portee, address);
-                                printf("19oper_type = %d\n", var->oper_type);
                                 constante = code3a_new_constante(complement);
-                                printf("20oper_type = %d\n", constante->oper_type);
-                                code3a_ajoute_instruction(alloc, constante, var, NULL, "Allocation de mémoire pour une Dec variable simple");
+                                code3a_ajoute_instruction(alloc, constante, var, NULL, "Alloc Dec var simple");
                                 adresseGlobaleCourante += 4;
                                 break;
       case P_VARIABLE_LOCALE : address = adresseLocaleCourante;
                                ajouteIdentificateur(n->nom, portee, T_ENTIER, address, complement);
                                var = code3a_new_var(nom, portee, address);
-                               printf("19oper_type = %d\n", var->oper_type);
                                constante = code3a_new_constante(complement);
-                               printf("20oper_type = %d\n", constante->oper_type);
-                               code3a_ajoute_instruction(alloc, constante, var, NULL, "Allocation de mémoire pour une Dec variable simple");
+                               code3a_ajoute_instruction(alloc, constante, var, NULL, "Alloc Dec var simple");
                                adresseLocaleCourante += 4;
                                break;
       case P_ARGUMENT : address = adresseArgumentCourant; 
                                   ajouteIdentificateur(n->nom, portee, T_ENTIER, address, complement);
-                                  /*var = code3a_new_var(nom, portee, address);*/
                                   adresseArgumentCourant += 4;
                                   break;
     }
@@ -543,16 +516,15 @@ void parcours_tabDec(n_dec *n)     /*******************/
     address = adresseGlobaleCourante;
     ajouteIdentificateur(n->nom, portee, T_TABLEAU_ENTIER, address, complement);
     var = code3a_new_var(n->nom, portee, address);
-    printf("21oper_type = %d\n", var->oper_type);
     adresseGlobaleCourante += 4*complement;
 
     operande* constante;
     constante = code3a_new_constante(complement);
-    printf("22oper_type = %d\n", constante->oper_type);
-    code3a_ajoute_instruction(alloc, constante, var, NULL, "Allocation de mémoire pour une Dec variable simple"); 
+    code3a_ajoute_instruction(alloc, constante, var, NULL, "Alloc Dec var indicée"); 
   }
-  else 
-	erreur("Varaible tableau déjà déclarée");
+  else {
+	  erreur("Varaible tableau déjà déclarée");
+  }  
   
   sprintf(texte, "%s[%d]", n->nom, n->u.tabDec_.taille);
 }
@@ -570,10 +542,6 @@ operande* parcours_var(n_var *n)
     var = parcours_var_indicee(n);
   }
 
-  /*int indice_var = rechercheExecutable(n->nom);
-  var = code3a_new_var(n->nom, portee, tabsymboles.tab[indice_var].adresse);*/
-  printf("23oper_type = %d\n", var->oper_type);
-
   return var;
 }
 
@@ -589,7 +557,7 @@ operande* parcours_var_simple(n_var *n)  /*********************/
 	erreur("Une variable simple ne doit pas être utilisé avec un indice");
   }
 
-  operande* var = code3a_new_var(n->nom, portee, tabsymboles.tab[indice_var].adresse);
+  operande* var = code3a_new_var(n->nom, tabsymboles.tab[indice_var].portee, tabsymboles.tab[indice_var].adresse);
 
   return var;
 }
@@ -606,11 +574,10 @@ operande* parcours_var_indicee(n_var *n)   /********************/
 		erreur("Une variable tableau doit être utilisée avec un indice");
 	}
 
-  int portee = tabsymboles.tab[indice_var].portee;
   int address = tabsymboles.tab[indice_var].adresse;
-  operande* var = code3a_new_var(n->nom, portee, address);
   operande* indice = parcours_exp( n->u.indicee_.indice );
-  var->u.oper_var.oper_indice = indice;
+  operande* var = code3a_new_var_indicee(n->nom, P_VARIABLE_GLOBALE, address, indice);
+  printf("Type d'operande pour les indices: %d", indice->oper_type);
 
   return var;
 }
@@ -625,8 +592,10 @@ int longueur_liste(n_l_dec *l_dec)
 }
 
 int longueur_args(n_l_exp *l_args) {
-  if(l_args == NULL)
+
+  if(l_args == NULL){
     return 0;
+  }
 
   operande* arg;
 
@@ -638,6 +607,7 @@ int longueur_args(n_l_exp *l_args) {
 
     arg = code3a_new_var(nom, 3, adresse);
     code3a_ajoute_instruction(func_param, arg, NULL, NULL, "param variable");
+   
   }
 
   if(l_args->tete->type == intExp){
@@ -645,36 +615,8 @@ int longueur_args(n_l_exp *l_args) {
     int val = l_args->tete->u.entier;
 
     arg = code3a_new_constante(val);
-    code3a_ajoute_instruction(func_param, arg, NULL, NULL, "param costante");
+    code3a_ajoute_instruction(func_param, arg, NULL, NULL, "param constante");
   }
 
-  
   return longueur_args(l_args->queue) + 1;
 }
-
-int es_ce_qu_il_y_a_un_ret_dans_la_fonction(n_l_instr *l_instr){
-
-    if(l_instr == NULL)
-      return 0;
-  
-    if(l_instr->tete->type == retourInst){
-      printf("salut a toi\n");
-      return 1;
-    }
-
-    return es_ce_qu_il_y_a_un_ret_dans_la_fonction(l_instr->queue)+1;
-}
-
-
-/*char* new_e() {
-  int* num;
-  num = &cpt;
-  char* nom = malloc(sizeof(*nom) * 3);
-  nom[0] = 'e';
-  char c = cpt + '0';
-  nom[1] = c;
-
-  ++*num;
-
-  return nom;
-}*/

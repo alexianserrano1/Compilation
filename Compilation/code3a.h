@@ -11,9 +11,9 @@
 #define O_VARIABLE 4
 
 typedef enum {arith_add, arith_sub, arith_mult, arith_div, //expressions arith.
-              func_call, func_param, func_val_ret, func_begin, func_end, //fonctions
+              func_call, func_param, func_val_ret, func_begin, func_end, //fonction
               assign, //affectation et transferts temporaires <-> variables
-              alloc, // allouer de la place pour variables et temporaires
+              alloc, // allouer de la place pour variables
               //instructions de contrôle (si, tantque) et logiques/comparaison:
               jump, jump_if_less, jump_if_less_or_equal, jump_if_equal,
               jump_if_not_equal, jump_if_greater, jump_if_greater_or_equal,
@@ -103,7 +103,7 @@ operande *code3a_new_constante(int valeur);
  */
 operande *code3a_new_etiquette(char *nom);
 /* Crée une nouvelle chaîne de caractères pour dénoter une étiquette.
- * Cette fonction utilise la variable globale etiq_counter, déclarée dans code3a.c
+ * Cette fonction utilise la var. globale etiq_counter déclarée dans code3a.c
  */
 operande *code3a_new_etiquette_auto();
 /*
@@ -118,6 +118,19 @@ operande *code3a_new_etiquette_auto();
  */
 operande *code3a_new_var(char *nom, int portee, int adresse);
 /*
+ * Crée une opérande de type variable qui sert de "wrapper" à
+ * une variable donnée.
+ * @param nom Le nom de la variable à envelopper dans cette opérande
+ * @param portee Une valeur parmi P_ARGUMENT, P_VARIABLE_LOCALE ou
+ *               P_VARIABLE_GLOBALE (définies dans tabsymboles.h)
+ * @param adresse Adresse de la variable, calculée dans la table des
+ *                symboles et copiée dans le code trois adresses
+ * @param indice Constante ou temporaire qui sert d'indice du tableau, ou NULL
+ * @return Une opérande variable à partir de la variable donnée
+ */
+operande *code3a_new_var_indicee(char *nom, int portee, int adresse,
+                                 operande *indice);
+/*
  * Cette fonction affiche le code à trois adresses créé dans le tableau
  * code3a. Selon la valeur de code3a_verbose, affiche plus ou moins de
  * détails.
@@ -128,11 +141,9 @@ void code3a_affiche_code();
  * param i_oper La ligne à afficher
  */
 void code3a_affiche_ligne_code(operation_3a *i_oper);
-
+void code3a_affiche_ligne_code_i(operation_3a *i_oper, int indent);
 
 // Déclaré dans code3a.c
 extern code3a_ code3a;
-
-
 
 #endif
